@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tidewell: Seen This Week</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, practical, a tool used at the end of a busy shift
+   IDEA: an order ticket rail: each hard moment is a ticket clipped up until HQ answers it
+   PICTURE: the working form + ticket rail itself, first thing on screen
+   COLOUR and TYPE: deep tide teal field, white tickets, crema orange accent; Rubik + Inter
+   LAYOUT: two views (Store / Ops Director) switched by tabs, one calm column, rail below */
+:root{color-scheme:light dark;
+--bg:light-dark(#f3f6f6,#0c1a1e);--ink:light-dark(#10262b,#e6f0f0);--mute:light-dark(#4c6468,#9db3b6);
+--tide:#0f4c5c;--tide2:light-dark(#1d6b7d,#2b8aa0);--crema:#e3953b;--card:light-dark(#ffffff,#13282d);
+--line:light-dark(#d5e0e1,#25424a);--ok:light-dark(#1f7a4d,#5fd39a);--warn:light-dark(#9a5a00,#f2b45c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Rubik,Inter,sans-serif;line-height:1.1;margin:0}
+.top{background:var(--tide);color:#fff;padding:clamp(20px,4vw,40px) max(5vw,16px) 0}
+.top h1{font-size:clamp(28px,5vw,44px);text-wrap:balance}
+.top p{margin:8px 0 18px;max-width:62ch;color:#cfe4e8}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs a{color:#fff;text-decoration:none;padding:12px 18px;border-radius:12px 12px 0 0;font-weight:600;background:rgba(255,255,255,.12);min-height:44px}
+.tabs a[aria-current=true]{background:var(--bg);color:var(--ink)}
+.wrap{max-width:1000px;margin:0 auto;padding:22px max(4vw,16px) 48px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font:700 clamp(24px,4vw,32px) Rubik,sans-serif;color:var(--tide2)}
+.stat span{font-size:13px;color:var(--mute)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
+.panel h2{font-size:21px;margin-bottom:4px}.sub{color:var(--mute);font-size:14px;margin:0 0 14px}
+label{display:block;font-weight:600;font-size:14px;margin:12px 0 6px}
+select,textarea,input[type=text]{width:100%;font:16px Inter,sans-serif;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px}
+textarea{min-height:84px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:9px 14px;font:500 14px Inter,sans-serif;min-height:44px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--tide);border-color:var(--tide);color:#fff}
+.btn{background:var(--crema);color:#2a1600;border:0;border-radius:12px;padding:12px 20px;font:600 16px Inter,sans-serif;min-height:44px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,.chip:focus-visible,.tabs a:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--crema);outline-offset:2px}
+.check{display:flex;gap:8px;align-items:center;font-weight:500;margin-top:12px}
+.check input{width:22px;height:22px}
+.hint{font-size:13px;color:var(--mute);margin-top:4px}
+.nudge{font-size:14px;color:var(--warn);margin-top:6px;min-height:1.2em}
+.toast{margin-top:12px;padding:10px 12px;border-radius:10px;background:light-dark(#e3f4ea,#173a2a);color:var(--ok);font-weight:600;display:none}
+.rail{display:grid;gap:12px}
+.ticket{background:var(--card);border:1px solid var(--line);border-radius:4px 4px 14px 14px;padding:14px 16px;position:relative;border-top:6px dashed var(--line)}
+.ticket.seen{border-top-color:var(--ok)}
+.meta{font-size:13px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 12px}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:light-dark(#e2eef0,#1d3a41);color:var(--tide2)}
+.status{font-size:14px;font-weight:600;margin-top:8px}
+.status.wait{color:var(--warn)}.status.ok{color:var(--ok)}
+.reply{margin-top:8px;padding:10px 12px;border-left:4px solid var(--ok);background:light-dark(#f1f8f4,#12291f);border-radius:6px;font-size:15px}
+.store{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--card)}
+.store h3{font-size:18px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.quiet{color:var(--warn);font-size:14px;font-weight:600}
+.cover{height:12px;border-radius:999px;background:var(--line);overflow:hidden;margin:6px 0 4px}
+.cover i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.pulse{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.small{font-size:13px;color:var(--mute)}
+footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+[hidden]{display:none!important}
+@media(max-width:600px){.row,.stats{grid-template-columns:minmax(0,1fr)}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat b{font-size:22px}.stat span{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.cover i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Seen This Week</h1>
+  <p>Frontline teams log the hard moments a shift handled. Every week, the Operations Director replies to each store about one of them, so a smooth shift is no longer an invisible shift.</p>
+  <nav class="tabs" aria-label="Views">
+    <a href="#store" id="t-store">Store team</a>
+    <a href="#hq" id="t-hq">Ops Director</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="stats" aria-label="This week">
+    <div class="stat"><b id="s-log">0</b><span>moments logged this week</span></div>
+    <div class="stat"><b id="s-rep">0%</b><span>answered by HQ</span></div>
+    <div class="stat"><b id="s-cov">0/12</b><span>stores acknowledged</span></div>
+  </section>
+
+  <!-- STORE VIEW -->
+  <div id="v-store">
+    <section class="panel">
+      <h2>What did today's shift handle?</h2>
+      <p class="sub">Takes under a minute. Name what happened and what the team did, not just "busy day".</p>
+      <form id="f">
+        <div class="row">
+          <div><label for="store">Store</label><select id="store"></select></div>
+          <div><label for="shift">Shift</label>
+            <select id="shift"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        </div>
+        <label id="lbl-type">What made it hard?</label>
+        <div class="chips" id="types" role="group" aria-labelledby="lbl-type"></div>
+        <label for="what">What did the team do about it?</label>
+        <textarea id="what" maxlength="240" placeholder="e.g. Grinder jammed at 8:10 during the commuter rush. Wen switched to the backup grinder and we kept the queue under 6 minutes."></textarea>
+        <div class="nudge" id="nudge" aria-live="polite"></div>
+        <label for="who">Your first name (optional)</label>
+        <input type="text" id="who" maxlength="20" autocomplete="off">
+        <div class="check"><input type="checkbox" id="anon"><label for="anon" style="margin:0">Post without my name</label></div>
+        <div style="margin-top:14px"><button class="btn" type="submit">Log this moment</button></div>
+        <div class="toast" id="toast" role="status"></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Did the company see your shift this week?</h2>
+      <p class="sub">One tap. Anonymous. We compare this before and after HQ replies.</p>
+      <div class="pulse">
+        <button class="btn ghost" id="p-yes" type="button">Yes</button>
+        <button class="btn ghost" id="p-no" type="button">No</button>
+        <span class="small" id="p-tally"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2 style="font-size:21px;margin:0 0 10px">This week at <span id="store-name"></span></h2>
+      <div class="rail" id="rail"></div>
+    </section>
+  </div>
+
+  <!-- HQ VIEW -->
+  <div id="v-hq" hidden>
+    <section class="panel">
+      <h2>Weekly review: Luo Feng, Operations Director</h2>
+      <p class="sub">Goal: one specific reply to every store each week. A quiet store is not proof that everything is fine.</p>
+      <div class="cover" aria-hidden="true"><i id="cov-bar" style="width:0"></i></div>
+      <div class="small" id="cov-text"></div>
+    </section>
+    <div id="stores"></div>
+  </div>
+
+  <footer>
+    <span class="small">Fictional sample data for a class prototype. Tidewell Coffee is not a real company.</span>
+    <button class="btn ghost" id="reset" type="button">Reset demo data</button>
+  </footer>
+</main>
+
+<script>
+{
+const STORES=["Quay Street","Hillside","North Market","Sunset Pier","Library Square","Station Road","Lantern Lane","Harbourfront Mall","Garden Terrace","Mill Bridge","Old Town","University Gate"];
+const TYPES=["Rush hour","Machine problem","Short-staffed","Difficult customer","Training a new hire","Stock or delivery issue"];
+const GENERIC=/\b(busy day|good job|great job|well done|good work|as usual|normal day)\b/i;
+const KEY="tidewell-seen-v1";
+const today=new Date();const iso=d=>d.toISOString().slice(0,10);
+const daysAgo=n=>{const d=new Date(today);d.setDate(d.getDate()-n);return iso(d)};
+const weekStart=(()=>{const d=new Date(today);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return iso(d)})();
+const sample=()=>({moments:[
+ {id:1,store:"Quay Street",shift:"Morning",type:"Machine problem",what:"Espresso machine lost pressure at 7:50. Kai pulled shots on the backup machine while Mia explained the wait to the queue. Nobody left without their order.",who:"",date:daysAgo(1),reply:"Kai and Mia, switching machines mid-rush and still keeping the queue calm is exactly the standard we want. I've asked maintenance to check Quay Street first this week. — Luo Feng",replyDate:daysAgo(0)},
+ {id:2,store:"Hillside",shift:"Evening",type:"Short-staffed",what:"Two people called in sick, so three of us covered close. We split the cleaning list and still finished on time.",who:"Jun",date:daysAgo(2),reply:"",replyDate:""},
+ {id:3,store:"Station Road",shift:"Afternoon",type:"Training a new hire",what:"New barista's first solo shift on the bar. Ana stayed beside her for the 3pm school rush and they did 40 drinks without a remake.",who:"",date:daysAgo(1),reply:"",replyDate:""},
+ {id:4,store:"Quay Street",shift:"Evening",type:"Difficult customer",what:"A customer shouted about a wrong order. Lee remade it, stayed polite and offered a voucher. He thanked us before leaving.",who:"Lee",date:daysAgo(3),reply:"",replyDate:""}],
+ pulse:{yes:3,no:9},sel:"Quay Street"});
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+if(!S||!Array.isArray(S.moments))S=sample();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const words=s=>s.trim().split(/\s+/).filter(Boolean).length;
+const thisWeek=m=>m.date>=weekStart;
+
+let picked="";
+$("store").innerHTML=STORES.map(s=>`<option>${esc(s)}</option>`).join("");
+$("store").value=S.sel||STORES[0];
+$("types").innerHTML=TYPES.map(t=>`<button type="button" class="chip" aria-pressed="false" data-t="${esc(t)}">${esc(t)}</button>`).join("");
+$("types").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;picked=b.dataset.t;
+  for(const c of $("types").children)c.setAttribute("aria-pressed",c===b?"true":"false")});
+$("store").addEventListener("change",()=>{S.sel=$("store").value;save();render()});
+$("anon").addEventListener("change",()=>{$("who").disabled=$("anon").checked;if($("anon").checked)$("who").value=""});
+
+const checkWhat=()=>{const v=$("what").value;let m="";
+  if(v&&words(v)<10)m="Try adding what the team actually did, so HQ can reply to something specific.";
+  else if(GENERIC.test(v))m="That sounds general. What exact moment would you want someone to notice?";
+  $("nudge").textContent=m;return m===""};
+$("what").addEventListener("input",checkWhat);
+
+$("f").addEventListener("submit",e=>{e.preventDefault();
+  const what=$("what").value.trim();
+  if(!picked){$("nudge").textContent="Pick what made the shift hard.";return}
+  if(!what){$("nudge").textContent="Write one or two sentences about what the team did.";return}
+  checkWhat();
+  S.moments.unshift({id:Date.now(),store:$("store").value,shift:$("shift").value,type:picked,what,
+    who:$("anon").checked?"":$("who").value.trim(),date:iso(today),reply:"",replyDate:""});
+  save();$("what").value="";picked="";for(const c of $("types").children)c.setAttribute("aria-pressed","false");
+  const t=$("toast");t.textContent="Logged. Luo Feng will see this in this week's review.";t.style.display="block";
+  setTimeout(()=>t.style.display="none",3500);render()});
+
+const vote=k=>{S.pulse[k]++;save();render()};
+$("p-yes").addEventListener("click",()=>vote("yes"));$("p-no").addEventListener("click",()=>vote("no"));
+
+const ticket=m=>`<article class="ticket ${m.reply?"seen":""}">
+  <div class="meta"><span class="tag">${esc(m.type)}</span><span>${esc(m.shift)} · ${esc(m.date)}</span><span>${m.who?esc(m.who):"Anonymous"}</span></div>
+  <p style="margin:8px 0 0">${esc(m.what)}</p>
+  ${m.reply?`<div class="status ok">Seen by HQ ✓</div><div class="reply">${esc(m.reply)}</div>`:`<div class="status wait">Waiting for HQ</div>`}
+</article>`;
+
+function renderHQ(){
+  const wk=S.moments.filter(thisWeek);
+  $("stores").innerHTML=STORES.map(st=>{
+    const ms=wk.filter(m=>m.store===st);const done=ms.some(m=>m.reply);
+    const head=`<h3><span>${esc(st)}</span><span class="${done?"status ok":ms.length?"status wait":"quiet"}" style="margin:0">${done?"Acknowledged ✓":ms.length?`${ms.length} waiting`:"Quiet week: check in"}</span></h3>`;
+    if(!ms.length)return `<section class="store">${head}<p class="small" style="margin:6px 0 0">Nothing logged. Visit or call the supervisor; quiet can mean busy, not fine.</p></section>`;
+    return `<section class="store">${head}${ms.map(m=>`<div style="margin-top:12px">${ticket(m)}${m.reply?"":`
+      <label for="r${m.id}">Your reply to the team</label>
+      <textarea id="r${m.id}" maxlength="280" placeholder="Name what they did and why it mattered."></textarea>
+      <div class="nudge" id="n${m.id}" aria-live="polite"></div>
+      <button class="btn" type="button" data-reply="${m.id}">Send reply</button>`}</div>`).join("")}</section>`}).join("")}
+
+$("stores").addEventListener("click",e=>{const b=e.target.closest("[data-reply]");if(!b)return;
+  const id=+b.dataset.reply;const v=$("r"+id).value.trim();const n=$("n"+id);
+  if(words(v)<8||GENERIC.test(v)){n.textContent="Make it specific: mention the action and its effect. A generic thanks can feel worse than nothing.";if(!v)return;
+    if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Send anyway";return}}
+  const m=S.moments.find(x=>x.id===id);m.reply=v+" — Luo Feng";m.replyDate=iso(today);save();render()});
+
+function render(){
+  const wk=S.moments.filter(thisWeek);const rep=wk.filter(m=>m.reply).length;
+  const ack=new Set(wk.filter(m=>m.reply).map(m=>m.store)).size;
+  $("s-log").textContent=wk.length;$("s-rep").textContent=wk.length?Math.round(rep/wk.length*100)+"%":"0%";
+  $("s-cov").textContent=ack+"/12";
+  $("cov-bar").style.width=(ack/12*100)+"%";
+  $("cov-text").textContent=`${ack} of 12 stores have had a specific reply this week. ${12-new Set(wk.map(m=>m.store)).size} stores logged nothing yet.`;
+  const st=$("store").value;$("store-name").textContent=st;
+  const mine=S.moments.filter(m=>m.store===st);
+  $("rail").innerHTML=mine.length?mine.map(ticket).join(""):`<p class="small">No moments logged for ${esc(st)} yet. The first one takes under a minute.</p>`;
+  const tot=S.pulse.yes+S.pulse.no;
+  $("p-tally").textContent=`${S.pulse.yes} yes · ${S.pulse.no} no (${tot?Math.round(S.pulse.yes/tot*100):0}% felt seen)`;
+  renderHQ()}
+
+$("reset").addEventListener("click",()=>{S=sample();save();$("store").value=S.sel;render()});
+
+const route=()=>{const hq=location.hash==="#hq";$("v-hq").hidden=!hq;$("v-store").hidden=hq;
+  $("t-hq").setAttribute("aria-current",hq?"true":"false");$("t-store").setAttribute("aria-current",hq?"false":"true")};
+window.addEventListener("hashchange",route);
+route();render();
+}
+</script>
+</body>
+</html>
